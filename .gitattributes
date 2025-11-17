@@ -1,0 +1,10 @@
+# Text files: normalize to LF in the repo; Windows will still check out CRLF
+* text=auto
+
+# Force CRLF for Windows-native text files
+*.sln text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Force LF where it matters
+*.sh  text eol=lf
