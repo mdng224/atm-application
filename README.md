@@ -1,171 +1,147 @@
-# App 🟦
+# 🏧 atm-application
 
-A modern .NET 9 project structured with **Vertical Slice Architecture**, **Entity Framework Core**, and **ASP.NET Aspire** for orchestration.  
-
-This solution demonstrates clean separation of concerns with four core projects:  
-
-- **App.Api** – Minimal API host (endpoints, features, vertical slices)  
-- **App.Application** – Application layer (interfaces, DTOs, validators, business rules)  
-- **App.Domain** – Domain layer (pure entities, enums, value objects)  
-- **App.Infrastructure** – Infrastructure layer (EF Core, ASP.NET Identity, JWT, persistence)  
-- **App.AppHost** – Aspire orchestration project (runs services like Postgres + Api together)  
-- **App.ServiceDefaults** – Default Aspire configuration (health checks, observability, etc.)
+Design and implement a web-based ATM application that allows a user to manage two bank accounts.  
+This repo showcases a small but well-structured .NET + Vue app using **ASP.NET Aspire**, **EF Core**, and a modern frontend stack.
 
 ---
 
-## 🏗️ Project Layout
+## 🚀 Tech Stack
 
-```text
-src/
-├─ App.Api/ # Minimal API host (vertical slices)
-│ └─ Features/
-│ ├─ Auth/ # Register, Login, Me
-│ ├─ Users/ # CRUD + pagination
-│ ├─ Employees/ # CRUD + restore + soft delete
-│ └─ Positions/ # CRUD + restore + soft delete
-│ └─ Clients/ # CRUD + restore + soft delete
-│ └─ Projects/ # CRUD + restore + soft delete
-│
-├─ App.Application/ # CQRS handlers, DTOs, validators, interfaces
-│ ├─ Abstractions/ # ICommand, IQuery, IUnitOfWork, etc.
-│ ├─ Common/ # Results, paging, exceptions
-│ ├─ Employees/
-│ ├─ Positions/
-│ └─ Users/
-│ └─ Clients/
-│ └─ Projects/
-│
-├─ App.Domain/ # Entities, enums, events, value objects
-│ ├─ Users/
-│ ├─ Employees/
-│ ├─ Positions/
-│ └─ Clients/
-│ └─ Projects/
-│ └─ Common/
-│
-├─ App.Infrastructure/ # EF Core, Identity, Persistence, Outbox
-│ ├─ Persistence/
-│ │ ├─ AppDbContext.cs
-│ │ ├─ Interceptors/ (AuditSaveChangesInterceptor, etc.)
-│ │ └─ Seed/
-│ ├─ Identity/
-│ └─ Services/ # JWT, Email, etc.
-│
-├─ App.AppHost/ # Aspire orchestration (API + Postgres)
-└─ App.ServiceDefaults/ # Health checks, logging, tracing
-```
+**Backend**
 
+- .NET / ASP.NET Core (minimal APIs)
+- ASP.NET Aspire (`App.AppHost`) for orchestration
+- Entity Framework Core + PostgreSQL
+- Clean-ish architecture:
+  - `App.Domain`
+  - `App.Application`
+  - `App.Infrastructure`
+  - `App.Api`
+
+**Frontend**
+
+- Vue 3 + TypeScript
+- Vite
+- Tailwind CSS
+- TanStack Table (Vue) for data grid
 
 ---
 
-## 🧱 Architecture Highlights
+## 🧱 Solution Layout
 
-- **Vertical Slice Design** – each feature folder owns its endpoint, DTOs, and logic.  
-- **CQRS** – separates command and query responsibilities for clean scalability.  
-- **DDD Patterns** – domain events, aggregates, and value objects maintain business integrity.  
-- **Auditing & Soft Delete** – every entity tracks `CreatedAtUtc`, `UpdatedAtUtc`, `DeletedAtUtc`, and user IDs via EF Core interceptors.  
-- **Outbox Pattern** – guarantees reliable event publication after successful transactions.  
-- **Deterministic GUID v7** seeding ensures consistent IDs across environments.
+- `App.Api` – HTTP API endpoints (ATM endpoints, contracts, HTTP result mappers)
+- `App.AppHost` – Aspire host that wires up API + infrastructure (Postgres, etc.)
+- `App.Application` – application layer (CQRS handlers, DTOs, results, pagination)
+- `App.Domain` – domain model (`Account`, `Transaction`, `TransactionType`)
+- `App.Infrastructure` – EF Core DbContext, migrations, repositories, readers, seeding
+- `App.ServiceDefaults` – shared Aspire / service defaults
+- `App.Tests` – backend tests
+- `frontend` – Vue 3 SPA
 
 ---
 
-## 🚀 Running Locally
+## 💾 Domain Overview
 
-### Prerequisites
-- [.NET 9 SDK](https://dotnet.microsoft.com/download)
-- [Docker Desktop](https://www.docker.com/)
+- **Account**
+  - `Id`, `Name`, `Balance`
+  - Methods: `Deposit`, `Withdraw`, `TransferTo`
+  - Maintains an in-memory list of `Transaction` entities
 
-### Start with Aspire
-Run the full stack (API + Postgres + health checks):
+- **Transaction**
+  - `Id`, `AccountId`, `Type` (`Deposit`, `Withdrawal`, `TransferIn`, `TransferOut`)
+  - `Amount`, `OccurredAtUtc`, `Description`, `CounterpartyAccountId`
+
+The backend exposes endpoints to:
+
+- Get accounts
+- Deposit into an account
+- Withdraw from an account
+- Transfer between accounts
+- Get paged transactions for an account
+
+The frontend shows:
+
+- Current balances for both accounts
+- A transfer form
+- Deposit/withdraw forms
+- A paged “Recent Transactions” table per account
+
+---
+
+## 🧰 Prerequisites
+
+- [.NET SDK](https://dotnet.microsoft.com/) (8+)
+- [Node.js](https://nodejs.org/) (v18+ recommended)
+- npm
+- Docker Desktop (optional, but recommended if you want to run Postgres via Aspire/docker-compose)
+
+---
+
+## 🔧 Backend Setup
+
+From the repo root:
 
 ```bash
-dotnet run --project App.AppHost
-
-This automatically:
-
-* Spins up a PostgreSQL container
-* Injects connection strings into the API
-* Waits for DB health before starting services
-
-Run API Only
-(when a Postgres instance is already running)
-
-```bash
-dotnet run --project App.Api
+# Restore & build
+dotnet restore
+dotnet build
 ```
 
 ---
 
-## 🧑‍💻 Database & EF Core
+## 1. Run EF Core Migrations
 
-Migrations are located in App.Infrastructure/Migrations.
+Migrations live in App.Infrastructure. Apply them using the API project as the startup project:
 
-Create a migration:
-```bash
-dotnet ef migrations add InitialCreate \
-  --startup-project App.Api \
-  --project App.Infrastructure
-```
-
-Apply migrations:
 ```bash
 dotnet ef database update \
-  --startup-project App.Api \
-  --project App.Infrastructure
+  --project App.Infrastructure \
+  --startup-project App.Api
 ```
+This will create and update the Postgres database to match the current model.
 
----
+If you change the model later, just add a new migration and run database update again.
 
-## 🔐 Authentication
+## 2. Run the backend via Aspire
 
-* ASP.NET Identity manages user creation, roles, and passwords.
-* JWT tokens generated via IJwtTokenService.
-* Endpoints under /auth handle registration, login, and current user retrieval.
+You can either:
 
----
+From the IDE
+Set App.AppHost as the startup project and click Run/Debug.
+Aspire will start the API and any required infrastructure (e.g. Postgres) for you.
 
-## 🌐 Frontend Overview
-
-The Vue 3 client communicates with the backend via a clean Axios layer.
-Core UI patterns include:
-* Searchable and paginated tables
-* Add/Edit/Delete/Restore dialogs
-* Real-time status badges and filters
-* Responsive layout using Tailwind and Grid utility classes
-
----
-
-## Example Endpoints
-
-| Method | Endpoint                  | Description                 |
-| :----- | :------------------------ | :-------------------------- |
-| GET    | `/health/db`              | Database connectivity check |
-| POST   | `/auth/register`          | Register new user           |
-| POST   | `/auth/login`             | Login and receive JWT       |
-| GET    | `/auth/me`                | Current user info           |
-| GET    | `/employees`              | Paginated employees         |
-| POST   | `/positions`              | Create new position         |
-| PATCH  | `/positions/{id}/restore` | Restore deleted position    |
-
----
-
-## 🧰 Development Commands
+Or from the command line
 
 ```bash
-dotnet build         # build all projects
-dotnet test          # (optional) run tests
-npm install && npm run dev  # run frontend (if separate repo)
+dotnet run --project App.AppHost/App.AppHost.csproj
 ```
 
 ---
 
-## 🏛️ About Bryant Engineering, Inc.
-Bryant Engineering, Inc.
- is a civil engineering and land surveying consulting firm based in Owensboro and Bowling Green, KY.
-This internal system streamlines personnel management and operational oversight for engineering projects.
+## Frontend Setup
+
+From the repo root: 
+
+```bash
+cd frontend
+
+# Install dependencies
+npm install
+
+# Start the dev server
+npm run dev
+```
+By default Vite will start on something like http://localhost:5173.
+The frontend is configured to call the API hosted by App.Api (via Aspire). If you change API URLs/ports, adjust the frontend config accordingly (see frontend/src/api/index.ts).
+
 
 ---
 
-## Developed By
+## Notes / Future Improvements
 
-Daniel Ng – Full-Stack Software Engineer
+* Add more validation especially on API requests
+* Add more filtering
+* Add auth
+* containerize frontend as part of the aspire host or docker-compose stack
+* Can use event sourcing
+
