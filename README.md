@@ -3,7 +3,8 @@
 Design and implement a web-based ATM application that allows a user to manage two bank accounts.  
 This repo showcases a small but well-structured .NET + Vue app using **ASP.NET Aspire**, **EF Core**, and a modern frontend stack.
 
-<img width="831" height="1205" alt="image" src="https://github.com/user-attachments/assets/6c2b816a-3cc2-4798-9d81-65881a6b60af" />
+<img width="799" height="1265" alt="image" src="https://github.com/user-attachments/assets/e7b2da99-ec57-41dd-b5f0-45644e10153a" />
+
 
 ---
 
